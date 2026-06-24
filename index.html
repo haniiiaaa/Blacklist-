@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pak E-Commerce Anti-Fraud Shield</title>
+    <link rel="stylesheet" href="https://pyscript.net" />
+    <script type="module" src="https://pyscript.net"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f6f8; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 600px; margin: 40px auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        h1 { color: #222; text-align: center; margin-bottom: 5px; }
+        p.subtitle { text-align: center; color: #666; margin-bottom: 30px; font-size: 14px; }
+        .card { border: 1px solid #ccc; padding: 20px; border-radius: 8px; margin-bottom: 25px; background: #fafbfc; }
+        h3 { margin-top: 0; color: #111; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
+        input, textarea { width: 100%; padding: 10px; margin: 8px 0 18px 0; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 15px; }
+        button { width: 100%; background: #333; color: white; border: none; padding: 12px; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        button:hover { background: #111; }
+        .result-box { padding: 15px; border-radius: 6px; margin-top: 15px; display: none; font-weight: bold; }
+        .clean { background-color: #e2f0d9; color: #385723; border: 1px solid #c5e1a5; text-align: center; }
+        .flagged { background-color: #fce4d6; color: #c65911; border: 1px solid #f8cbad; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🇵🇰 Pak Fraud Shield</h1>
+    <p class="subtitle">Permanent National Database Utility</p>
+    <div class="card">
+        <h3>🔍 Verify Incoming Order</h3>
+        <label>Customer Mobile Number:</label>
+        <input type="text" id="checkPhone" placeholder="e.g., 03001234567">
+        <button py-click="check_order">Check Order Safety</button>
+        <div id="checkResult" class="result-box"></div>
+    </div>
+    <div class="card">
+        <h3>🛑 Report Delivery Refusal (RTS)</h3>
+        <label>Offender Mobile Number:</label>
+        <input type="text" id="reportPhone" placeholder="e.g., 03331234567">
+        <label>City:</label>
+        <input type="text" id="reportCity" placeholder="e.g., Lahore">
+        <label>Reason:</label>
+        <textarea id="reportReason" rows="2" placeholder="Refused delivery at door"></textarea>
+        <button style="background: #a62626;" py-click="report_buyer">Log to Blacklist</button>
+        <div id="reportResult" class="result-box"></div>
+    </div>
+</div>
+<script type="py">
+import re, hashlib
+from pyscript import document
+mock_database = {}
+def clean_and_hash(phone_input):
+    digits = re.sub(r"\D", "", phone_input)
+    if digits.startswith("92"): digits = "0" + digits[2:]
+    elif not digits.startswith("0") and len(digits) == 10: digits = "0" + digits
+    if len(digits) != 11 or not digits.startswith("03"): return None, None
+    return hashlib.sha256(digits.encode()).hexdigest(), f"{digits[:4]}******{digits[-1]}"
+def check_order(event):
+    res_box = document.getElementById('checkResult')
+    res_box.style.display = "block"
+    phone_hash, _ = clean_and_hash(document.getElementById('checkPhone').value)
+    if not phone_hash:
+        res_box.className = "result-box flagged"
+        res_box.innerHTML = "❌ Invalid number! Use standard Pakistani 11 digits format."
+        return
+    if phone_hash in mock_database:
+        d = mock_database[phone_hash]
+        res_box.className = "result-box flagged"
+        res_box.innerHTML = f"❌ RISK WARNING:<br>• Rejections: {d['rts']}<br>• City: {d['city']}<br>• Reason: {d['reason']}"
+    else:
+        res_box.className = "result-box clean"
+        res_box.innerHTML = "✅ GREEN LIGHT: No refusal history found!"
+def report_buyer(event):
+    res_box = document.getElementById('reportResult')
+    phone_hash, masked = clean_and_hash(document.getElementById('reportPhone').value)
+    if not phone_hash: return
+    if phone_hash in mock_database: mock_database[phone_hash]['rts'] += 1
+    else: mock_database[phone_hash] = {"city": document.getElementById('reportCity').value or "Unknown", "reason": document.getElementById('reportReason').value or "RTS", "rts": 1}
+    res_box.style.display = "block"; res_box.className = "result-box clean"
+    res_box.innerHTML = f"🛑 Logged: User {masked} blacklisted."
+    document.getElementById('reportPhone').value = ""; document.getElementById('reportReason').value = ""
+</script>
+</body>
+</html>
